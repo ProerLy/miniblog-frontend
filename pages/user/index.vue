@@ -16,7 +16,10 @@
 					<view class="nickname">{{ userInfo?.nickname || userInfo?.username }}</view>
 					<view class="bio">{{ userInfo?.bio || '这个人很懒，什么都没有写~' }}</view>
 				</view>
-				<view class="edit-btn" @click="goProfile">编辑</view>
+				<view class="header-right">
+					<view class="message-icon" @click="goMessages">💬</view>
+					<view class="edit-btn" @click="goProfile">编辑</view>
+				</view>
 			</view>
 
 			<!-- 统计信息 -->
@@ -60,7 +63,8 @@
 			</view>
 
 			<!-- 加载更多 -->
-			<view class="load-more" v-if="(articles.length > 0 && activeTab === 'articles') || (favorites.length > 0 && activeTab === 'favorites')">
+			<view class="load-more"
+				v-if="(articles.length > 0 && activeTab === 'articles') || (favorites.length > 0 && activeTab === 'favorites')">
 				<text v-if="loadingMore">加载中...</text>
 				<text v-else-if="noMore">没有更多了</text>
 				<text v-else>上拉加载更多</text>
@@ -76,7 +80,7 @@
 
 <script setup lang="ts">
 	import { ref, computed } from 'vue'
-	import { onShow, onReachBottom } from '@dcloudio/uni-app'
+	import { onShow, onReachBottom, onPullDownRefresh } from '@dcloudio/uni-app'
 	import ArticleCard from '@/components/ArticleCard.vue'
 	import SkeletonCard from '@/components/SkeletonCard.vue'
 	import EmptyState from '@/components/EmptyState.vue'
@@ -115,6 +119,7 @@
 	}
 
 	const loadArticles = async (isRefresh = false) => {
+		console.log(userStore.userInfo);
 		if (!userStore.userInfo?.id) return
 		if (loading.value || articlesNoMore.value) return
 
@@ -129,6 +134,7 @@
 				page: articlesPage.value,
 				size: pageSize
 			})
+			console.log(res);
 			if (isRefresh) {
 				articles.value = res.records
 			} else {
@@ -175,11 +181,16 @@
 			loadingMore.value = false
 		}
 	}
-	
-	const loadNum = async()=> {
+
+	const loadNum = async () => {
 		if (!userStore.userInfo?.id) return
-		const res = await userApi.nums()
-		userStore.userInfo = res;
+		const res = await userApi.nums(userStore.userInfo.id)
+		userStore.userInfo = {
+			...userStore.userInfo,
+			followerCount: res.followers,
+			followingCount: res.following,
+			likeCount: res.likes
+		};
 	}
 
 	const loadMore = async () => {
@@ -201,6 +212,10 @@
 
 	const goProfile = () => {
 		uni.navigateTo({ url: '/pages/user/profile' })
+	}
+
+	const goMessages = () => {
+		uni.switchTab({ url: '/pages/message/list' })
 	}
 
 	const goFollowers = () => {
@@ -230,13 +245,25 @@
 
 	onShow(async () => {
 		loadNum()
+		articlesNoMore.value = false
+		favoritesNoMore.value = false
 		if (activeTab.value === 'articles') {
 			loadArticles(true)
 		} else {
 			loadFavorites(true)
 		}
 	})
-
+	onPullDownRefresh(() => {
+		loadNum()
+		articlesNoMore.value = false
+		favoritesNoMore.value = false
+		if (activeTab.value === 'articles') {
+			loadArticles(true)
+		} else {
+			loadFavorites(true)
+		}
+		uni.stopPullDownRefresh()
+	})
 	onReachBottom(() => {
 		loadMore()
 	})
@@ -244,10 +271,7 @@
 
 <style lang="scss" scoped>
 	.user-page {
-		height: calc(100vh - var(--window-top) - var(--window-bottom));
-		overflow-y: auto;
 		background: #f5f5f5;
-		padding-bottom: calc(var(--window-bottom));
 	}
 
 	.not-login {
@@ -255,9 +279,9 @@
 		flex-direction: column;
 		align-items: center;
 		justify-content: center;
-		padding: 160rpx 48rpx;
+		padding: 0 48rpx;
 		background: #fff;
-		height: 100%;
+		height: calc(100vh - var(--window-bottom) - var(--window-top));
 
 		.not-login-icon {
 			font-size: 120rpx;
@@ -314,6 +338,17 @@
 				font-size: 26rpx;
 				color: #999;
 			}
+		}
+
+		.header-right {
+			display: flex;
+			align-items: center;
+			gap: 16rpx;
+		}
+
+		.message-icon {
+			font-size: 44rpx;
+			padding: 8rpx;
 		}
 
 		.edit-btn {

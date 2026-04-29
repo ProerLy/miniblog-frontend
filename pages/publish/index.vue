@@ -50,15 +50,17 @@
 
 		<!-- 发布按钮 -->
 		<view class="footer">
-			<button class="publish-btn" @click="handlePublish" :loading="loading">发布文章</button>
+			<button class="publish-btn" @click="handlePublish" :loading="loading">{{articleId ? '修改文章':'发布文章'}}</button>
 		</view>
 	</view>
 </template>
 
 <script setup lang="ts">
 	import { ref, computed, onMounted } from 'vue'
-	import { articleApi } from '@/api/article'
+	import { onLoad } from '@dcloudio/uni-app'
+	import { articleApi, type Article } from '@/api/article'
 	import { categorieApi } from '@/api/categorie'
+	import { uploadApi } from '@/api/upload'
 
 	const categories = ref([
 	])
@@ -71,6 +73,7 @@
 		categoryId: undefined as number | undefined,
 		tags: ''
 	})
+	const articleId = ref(null)
 
 	const loading = ref(false)
 	const selectedCategory = computed(() => {
@@ -84,15 +87,41 @@
 			console.error('加载失败', e)
 		}
 	}
+	const loadArticle = async () => {
+		try {
+			uni.showLoading({
+				title: '加载中'
+			})
+			const res = await articleApi.detail(articleId.value).finally(_ => {
+				uni.hideLoading()
+			})
+			form.value = {
+				title: res.title,
+				content: res.content,
+				summary: res.summary,
+				coverImage: res.coverImage,
+				categoryId: res.categoryId,
+				tags: res.tags
+			}
+		} catch (e) {
+			uni.showToast({ title: '加载文章失败', icon: 'none' })
+		}
+	}
 	const chooseCover = () => {
 		uni.chooseImage({
 			count: 1,
 			sizeType: ['compressed'],
 			sourceType: ['album', 'camera'],
-			success: (res) => {
+			success: async (res) => {
+				const filePath = res.tempFilePaths[0]
 				// 演示模式，使用本地路径
-				form.value.coverImage = res.tempFilePaths[0]
-				uni.showToast({ title: '图片已选择', icon: 'none' })
+				const result = await uploadApi.uploadImage(filePath)
+				if (result.code === 200) {
+					form.value.coverImage = result.data // 拿到 URL 填进去
+					uni.showToast({ title: '上传成功', icon: 'success' })
+				} else {
+					uni.showToast({ title: result.msg, icon: 'none' })
+				}
 			}
 		})
 	}
@@ -111,11 +140,16 @@
 			uni.showToast({ title: '请输入文章内容', icon: 'none' })
 			return
 		}
+		if (!form.value.categoryId) {
+			uni.showToast({ title: '请选择分类', icon: 'none' })
+			return
+		}
 
 		loading.value = true
 		try {
-			await articleApi.publish(form.value)
-			uni.showToast({ title: '发布成功', icon: 'success' })
+			if (articleId.value) await articleApi.update(articleId.value, form.value)
+			else await articleApi.publish(form.value)
+			uni.showToast({ title: articleId.value ? '修改成功' : '发布成功', icon: 'success' })
 			setTimeout(() => {
 				form.value = {
 					title: '',
@@ -137,13 +171,20 @@
 	onMounted(() => {
 		loadCategories()
 	})
+	onLoad((options : object) => {
+		if (options.id) {
+			articleId.value = parseInt(options.id)
+			loadArticle()
+		}
+	})
 </script>
 
 <style lang="scss" scoped>
 	.publish-page {
-		min-height: 100vh;
+		height: calc(100vh - var(--window-bottom) - var(--window-top) - 120rpx);
 		background: #f5f5f5;
-		padding-bottom: calc(var(--window-bottom) + 50rpx);
+		overflow-y: auto;
+		overflow-x: hidden;
 	}
 
 	.form {

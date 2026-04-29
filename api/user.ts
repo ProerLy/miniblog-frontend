@@ -19,7 +19,7 @@ export const userApi = {
   unfollow(userId: number) {
     return request({ url: `/users/${userId}/follow`, method: 'DELETE' })
   },
-  nums(){
-	  return request({ url: `/users/stats` })
+  nums(userId?: number){
+	  return request({ url: userId ? `/users/${userId}/stats` : `/users/stats` })
   }
 }

@@ -1,4 +1,4 @@
-const BASE_URL = 'http://localhost:9091/api'
+const BASE_URL = 'http://localhost:9090/api'
 
 interface RequestOptions {
 	url : string
@@ -24,10 +24,18 @@ export function request<T = any>(options : RequestOptions) : Promise<T> {
 			data: options.data,
 			header,
 			success: (res) => {
+				console.log(res);
 				if (res.statusCode === 200) {
 					const data = res.data as any
 					if (data.code === 200) {
 						resolve(data.data)
+					} else if (data.code === 401) {
+						uni.showToast({ title: '请登录后操作', icon: 'error' })
+						setTimeout(() => {
+							uni.navigateTo({
+								url: '/pages/login/index'
+							})
+						}, 1000)
 					} else {
 						uni.showToast({ title: data.message || '请求失败', icon: 'none' })
 						reject(data)
@@ -35,7 +43,7 @@ export function request<T = any>(options : RequestOptions) : Promise<T> {
 				} else {
 					if (res.statusCode === 401) {
 						uni.showToast({ title: '请登录后操作', icon: 'error' })
-						setTimeout(()=> {
+						setTimeout(() => {
 							uni.navigateTo({
 								url: '/pages/login/index'
 							})

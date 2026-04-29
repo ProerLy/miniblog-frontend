@@ -24,27 +24,27 @@ export interface ConversationItem {
 }
 
 export const messageApi = {
-  // POST /api/messages/send  — 发送私信
+  // POST /api/messages/{receiverId} — 发送私信
   send(data: { receiverId: number; content: string }) {
-    return request<Message>({ url: '/messages/send', method: 'POST', data })
+    return request<Message>({ url: `/messages/${data.receiverId}`, method: 'POST', data: { content: data.content } })
   },
 
-  // GET /api/messages/conversation/{userId}  — 获取与某人的聊天记录
-  getConversation(userId: number, params?: { limit?: number }) {
-    return request<Message[]>({ url: `/messages/conversation/${userId}`, data: params })
+  // GET /api/messages/{otherId} — 获取与某人的聊天记录
+  getConversation(otherId: number, params?: { limit?: number }) {
+    return request<Message[]>({ url: `/messages/${otherId}`, data: params })
   },
 
-  // GET /api/messages/conversations  — 获取会话列表
+  // GET /api/messages/conversations — 获取会话列表
   getConversationList() {
     return request<ConversationItem[]>({ url: '/messages/conversations' })
   },
 
-  // PUT /api/messages/read/{senderId}  — 标记某人的消息为已读
+  // PUT /api/messages/{senderId}/read — 标记某人的消息为已读
   markAsRead(senderId: number) {
-    return request({ url: `/messages/read/${senderId}`, method: 'PUT' })
+    return request({ url: `/messages/${senderId}/read`, method: 'PUT' })
   },
 
-  // GET /api/messages/unread-count  — 未读消息数
+  // GET /api/messages/unread-count — 未读消息数
   getUnreadCount() {
     return request<number>({ url: '/messages/unread-count' })
   }

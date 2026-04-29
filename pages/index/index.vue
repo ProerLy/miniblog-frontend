@@ -30,6 +30,12 @@
 			<EmptyState v-if="!loading && articles.length === 0" title="暂无文章" description="换个分类看看吧" />
 		</view>
 
+		<!-- 悬浮发布按钮 -->
+		<view class="publish-btn" :style="{ right: btnRight + 'px', bottom: btnBottom + 'px' }" 
+			@touchstart.stop="onTouchStart" @touchmove.stop="onTouchMove" @touchend.stop="onTouchEnd">
+			<uni-icons type="plusempty" size="30" color="#fff"></uni-icons>
+		</view>
+
 		<!-- 加载更多 -->
 		<view class="load-more" v-if="articles.length > 0">
 			<text v-if="loadingMore">加载中...</text>
@@ -95,10 +101,11 @@
 				params.categoryId = currentCategory.value
 			}
 
-			const res = await articleApi.list(params)
+			const res = await articleApi.list(params).finally(_=> {
+				uni.stopPullDownRefresh()
+			})
 			if (isRefresh) {
 				articles.value = res.records
-				uni.stopPullDownRefresh()
 			} else {
 				articles.value.push(...res.records)
 			}
@@ -135,6 +142,41 @@
 	const goDetail = (id : number) => {
 		uni.navigateTo({ url: `/pages/article/detail?id=${id}` })
 	}
+	const goPublish = () => {
+		uni.navigateTo({ url: '/pages/publish/index' })
+	}
+
+	// 拖动按钮
+	const btnRight = ref(16)
+	const btnBottom = ref(120)
+	let startX = 0, startY = 0, startRight = 16, startBottom = 120
+	let moved = false
+
+	const onTouchStart = (e: any) => {
+		startX = e.touches[0].clientX
+		startY = e.touches[0].clientY
+		startRight = btnRight.value
+		startBottom = btnBottom.value
+		moved = false
+	}
+	const onTouchMove = (e: any) => {
+		const dx = e.touches[0].clientX - startX
+		const dy = e.touches[0].clientY - startY
+		if (Math.abs(dx) > 5 || Math.abs(dy) > 5) moved = true
+		btnRight.value = Math.max(0, Math.min(startRight - dx, uni.getSystemInfoSync().windowWidth - 96))
+		btnBottom.value = Math.max(0, startBottom - dy)
+	}
+	const onTouchEnd = () => {
+		if (!moved) {
+			uni.navigateTo({ url: '/pages/publish/index' })
+		} else {
+			// 磁吸效果：吸附到左或右边
+			const screenW = uni.getSystemInfoSync().windowWidth
+			const btnW = 96
+			const leftEdge = btnRight.value < screenW / 2 - btnW / 2
+			btnRight.value = leftEdge ? 16 : screenW - btnW + 32
+		}
+	}
 	onPullDownRefresh(() => {
 		getBanner()
 		loadCategories(true)
@@ -162,7 +204,7 @@
 
 <style lang="scss" scoped>
 	.home-page {
-		padding-bottom: 40rpx;
+		// height: calc(100vh - var(--window-bottom) - var(--window-top));
 	}
 
 	.search-bar {
@@ -226,5 +268,27 @@
 		padding: 32rpx;
 		font-size: 26rpx;
 		color: #999;
+	}
+
+	.publish-btn {
+		position: fixed;
+		right: 32rpx;
+		bottom: 20%;
+		width: 96rpx;
+		height: 96rpx;
+		background: $uni-primary;
+		border-radius: 50%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		box-shadow: 0 8rpx 24rpx rgba(0, 175, 126, 0.4);
+		z-index: 99;
+		transition: right 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+		.icon {
+			font-size: 56rpx;
+			color: #fff;
+			line-height: 1;
+		}
 	}
 </style>

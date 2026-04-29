@@ -57,7 +57,7 @@
 </template>
 
 <script setup lang="ts">
-	import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+	import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
 	import { onPullDownRefresh, onReachBottom, onShow, onLoad } from '@dcloudio/uni-app'
 	import ArticleCard from '@/components/ArticleCard.vue'
 	import EmptyState from '@/components/EmptyState.vue'
@@ -70,7 +70,7 @@
 	const hasSearched = ref(false)
 	const loading = ref(false)
 	const page = ref(1)
-	const pageSize = 10
+	const pageSize = 3
 	const noMore = ref(false)
 	const loadingMore = ref(false)
 	const isFocus = ref(false)
@@ -179,7 +179,13 @@
 			url: '/pages/index/index'
 		})
 	}
+	// watch(()=> keyword.value, (val)=> {
+	// 	if(!val.trim()){
+	// 		clearSearch()
+	// 	}
+	// })
 	onPullDownRefresh(() => {
+		noMore.value = false
 		loadData(true)
 	})
 
@@ -206,7 +212,6 @@
 
 <style lang="scss" scoped>
 	.search-page {
-		min-height: 100vh;
 		background: #f5f5f5;
 	}
 

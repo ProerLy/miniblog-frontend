@@ -14,17 +14,12 @@ export interface FollowUser {
 export const followApi = {
   // POST /api/follow/{userId}  — 关注用户
   follow(userId: number) {
-    return request({ url: `/follow/${userId}`, method: 'POST' })
+    return request({ url: `/users/${userId}/follow`, method: 'POST' })
   },
 
-  // DELETE /api/follow/{userId}  — 取消关注
-  unfollow(userId: number) {
-    return request({ url: `/follow/${userId}`, method: 'DELETE' })
-  },
-
-  // GET /api/follow/status/{userId}  — 查询是否已关注
+  // GET /api/users/{userId}/is-following  — 查询是否已关注
   isFollowing(userId: number) {
-    return request<boolean>({ url: `/follow/status/${userId}` })
+    return request<boolean>({ url: `/users/${userId}/is-following` })
   },
 
   // GET /api/users/{id}/followers  — 获取粉丝列表

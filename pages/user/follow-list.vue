@@ -1,4 +1,4 @@
-﻿<template>
+<template>
 	<view class="follow-list-page">
 		<!-- 椤堕儴瀵艰埅 -->
 		<view class="nav-bar">
@@ -17,7 +17,7 @@
 					<view class="bio" v-else>鏆傛棤绠€浠?</view>
 				</view>
 				<!-- 鍏虫敞鎸夐挳锛氬鏋滄槸绮変笣鍒楄〃锛屾樉绀哄叧娉ㄧ姸鎬侊紱鍏虫敞鍒楄〃涓嶆樉绀?-->
-				<view class="action-btn" v-if="type === 'followers' && !isMe(user.id)"
+				<view class="action-btn" v-if="type === 'followers' && !isMe(user.id) && userStore.token"
 					:class="{ following: followingIds.has(user.id) }" @click.stop="toggleFollow(user)">
 					{{ followingIds.has(user.id) ? '已关注' : '关注' }}
 				</view>
@@ -38,7 +38,7 @@
 
 <script setup lang="ts">
 	import { ref, computed } from 'vue'
-	import { onLoad } from '@dcloudio/uni-app'
+	import { onLoad, onShow } from '@dcloudio/uni-app'
 	import EmptyState from '@/components/EmptyState.vue'
 	import { useUserStore } from '@/store/user'
 	import { followApi } from '@/api/follow'
@@ -54,7 +54,7 @@
 	const loadingMore = ref(false)
 	const noMore = ref(false)
 	const page = ref(1)
-	const pageSize = 20
+	const pageSize = 10
 	const followingIds = ref(new Set<number>())
 
 	const isMe = (id : number) => userStore.userInfo?.id === id
@@ -74,7 +74,7 @@
 				? await followApi.getFollowers(userId.value, params)
 				: await followApi.getFollowing(userId.value, params)
 
-			const items : User[] = Array.isArray(res) ? res : []
+			const items : User[] = Array.isArray(res) ? res : res.records
 			if (isRefresh) {
 				list.value = items
 			} else {
@@ -140,11 +140,17 @@
 		userId.value = parseInt(options?.userId) || 0
 		loadData(true)
 	})
+	onShow(()=> {
+		noMore.value = false
+		loadData(true)
+	})
 </script>
 
 <style lang="scss" scoped>
 	.follow-list-page {
-		height: 100vh;
+		height: calc(100vh - var(--window-bottom) - var(--window-top));
+		overflow-y: auto;
+		overflow-x: hidden;
 		display: flex;
 		flex-direction: column;
 		background: #f5f5f5;

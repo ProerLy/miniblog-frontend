@@ -22,7 +22,8 @@
     {
       "path": "pages/user/index",
       "style": {
-        "navigationBarTitleText": "个人主页"
+        "navigationBarTitleText": "个人主页",
+		"enablePullDownRefresh": true
       }
     },
     {
@@ -40,7 +41,8 @@
     {
       "path": "pages/user/other",
       "style": {
-        "navigationBarTitleText": ""
+        "navigationBarTitleText": "",
+		"navigationStyle": "custom"
       }
     },
     {
@@ -54,6 +56,19 @@
       "style": {
         "navigationBarTitleText": "搜索",
 		"enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/message/list",
+      "style": {
+        "navigationBarTitleText": "消息",
+		"enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/message/chat",
+      "style": {
+        "navigationBarTitleText": "聊天"
       }
     }
   ],
@@ -74,12 +89,12 @@
         "iconPath": "static/search.png",
         "selectedIconPath": "static/search_active.png"
       },
-      {
-        "pagePath": "pages/publish/index",
-        "text": "发布",
-        "iconPath": "static/publish.png",
-        "selectedIconPath": "static/publish_active.png"
-      },
+	  {
+	    "pagePath": "pages/message/list",
+	    "text": "消息",
+	    "iconPath": "static/message.png",
+	    "selectedIconPath": "static/message_active.png"
+	  },
       {
         "pagePath": "pages/user/index",
         "text": "我的",

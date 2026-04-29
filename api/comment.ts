@@ -24,5 +24,9 @@ export const commentApi = {
   /** 删除评论 */
   delete(articleId: number, commentId: number) {
     return request({ url: `/articles/${articleId}/comments/${commentId}`, method: 'DELETE' })
-  }
+  },
+  /** 评论点赞 */
+  like(articleId: number, commentId: number) {
+    return request({ url: `/articles/${articleId}/comments/${commentId}/like`, method: 'POST' })
+  },
 }

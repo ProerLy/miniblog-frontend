@@ -10,15 +10,15 @@
 				<view class="title">{{ article.title }}</view>
 
 				<!-- 作者信息（点击跳转他人主页）-->
-				<view class="author-info" @click="goAuthor">
+				<view class="author-info" @click="goAuthor(null)">
 					<image :src="article.authorAvatar || '/static/default-avatar.png'" class="avatar" />
 					<view class="author-meta">
 						<text class="nickname">{{ article.authorNickname }}</text>
 						<text class="time">{{ formatTime(article.createTime) }}</text>
 					</view>
 					<template v-if="showFlollow">
-					<view class="follow-btn" v-if="!isFollowing" @click.stop="follow">关注</view>
-					<view class="followed-btn" v-else @click.stop="follow">已关注</view>
+						<view class="follow-btn" v-if="!isFollowing" @click.stop="follow">关注</view>
+						<view class="followed-btn" v-else @click.stop="follow">已关注</view>
 					</template>
 				</view>
 
@@ -58,16 +58,27 @@
 			</view>
 			<view class="action-icons">
 				<view class="action-icon-item" :class="{ active: article.isLiked }" @click="toggleLike">
-					<text class="action-icon">{{ article.isLiked ? '❤️' : '🤍' }}</text>
-					<text class="action-label">{{ article.likeCount }}</text>
+					<text class="action-icon"><uni-icons :type="article.isLiked?'heart-filled':'heart'"
+							size="28"></uni-icons></text>
+					<text class="action-label">{{ article.likeCount || 0 }}</text>
 				</view>
 				<view class="action-icon-item" @click="openCommentSheet(false)">
-					<text class="action-icon">💬</text>
+					<text class="action-icon">
+						<uni-icons type="chat" size="28"></uni-icons>
+					</text>
 					<text class="action-label">{{ article.commentCount || 0 }}</text>
 				</view>
 				<view class="action-icon-item" :class="{ active: article.isFavorited }" @click="toggleFavorite">
-					<text class="action-icon">{{ article.isFavorited ? '⭐' : '☆' }}</text>
+					<text class="action-icon"><uni-icons :type="article.isFavorited?'star-filled':'star'"
+							size="28"></uni-icons></text>
 					<text class="action-label">{{ article.isFavorited ? '已收藏' : '收藏' }}</text>
+				</view>
+				<view class="action-icon-item" @click="goPublish(articleId)"
+					v-if="article.userId === userStore.userInfo?.id">
+					<text class="action-icon">
+						<uni-icons type="compose" size="28"></uni-icons>
+					</text>
+					<text class="action-label">编辑</text>
 				</view>
 				<!-- <view class="action-icon-item" @click="shareArticle">
 					<text class="action-icon">🔗</text>
@@ -85,9 +96,10 @@
 			<view class="sheet-header">
 				<text class="sheet-title">{{ article?.commentCount || 0 }} 条评</text>
 				<view class="sheet-tabs">
-					<text class="tab" :class="{ active: sortType === 'hot' }" @click="sortType = 'hot'">热度</text>
+					<text class="tab" :class="{ active: sortType === 'hot' }" @click="selectSortType('hot')">热度</text>
 					<text class="tab-divider">|</text>
-					<text class="tab" :class="{ active: sortType === 'time' }" @click="sortType = 'time'">最新</text>
+					<text class="tab" :class="{ active: sortType === 'latest' }"
+						@click="selectSortType('latest')">最新</text>
 				</view>
 				<text class="close-btn" @click="closeCommentSheet">×</text>
 			</view>
@@ -107,7 +119,8 @@
 
 						<!-- 左侧内容 -->
 						<view class="comment-body-col">
-							<image :src="comment.userAvatar || '/static/default-avatar.png'" class="c-avatar" />
+							<image :src="comment.userAvatar || '/static/default-avatar.png'" class="c-avatar"
+								@click="goAuthor(comment)" />
 							<view class="c-content">
 								<view class="c-header">
 									<text class="c-nickname">{{ comment.userNickname }}</text>
@@ -116,7 +129,9 @@
 								<view class="c-text">{{ comment.content }}</view>
 								<view class="c-actions">
 									<text class="c-reply-btn" @click="onReply(comment)">回复</text>
-									<!-- <text class="c-report">举报</text> -->
+									<text class="c-report"><uni-icons
+											:type="comment.liked ? 'hand-up-filled' : 'hand-up'"
+											@click="doLike(comment)"></uni-icons></text>
 								</view>
 
 								<!-- 子评论（展开/收起-->
@@ -165,9 +180,10 @@
 				</view>
 				<view class="input-row">
 					<input class="comment-input" v-model="commentContent" :focus="inputFocus"
-						:placeholder="userStore.token ? (replyTo ? `回复 ${replyTo.userNickname}...` : '说点什么..'):'请先登录...'" @confirm="submitComment" :disabled="!userStore.token"
-						confirm-type="send" />
-					<button class="send-btn" :class="{ active: commentContent.trim() }" @click="submitComment"  :disabled="!userStore.token || !commentContent.trim()">
+						:placeholder="userStore.token ? (replyTo ? `回复 ${replyTo.userNickname}...` : '说点什么..'):'请先登录...'"
+						@confirm="submitComment" :disabled="!userStore.token" confirm-type="send" />
+					<button class="send-btn" :class="{ active: commentContent.trim() }" @click="submitComment"
+						:disabled="!userStore.token || !commentContent.trim()">
 						发送 </button>
 				</view>
 			</view>
@@ -194,7 +210,7 @@
 	const replyTo = ref<Comment | null>(null)
 	const showCommentSheet = ref(false)
 	const inputFocus = ref(false)
-	const sortType = ref<'hot' | 'time'>('hot')
+	const sortType = ref<'hot' | 'latest'>('hot')
 	const isFollowing = ref(false)
 	const loadingMore = ref(false)
 	const noMore = ref(false)
@@ -202,9 +218,9 @@
 	const pageSize = 20
 	const relatedArticles = ref<Article[]>([])
 
-const showFlollow = computed(()=> {
-	return userStore.userInfo?.id != article.value?.userId
-})
+	const showFlollow = computed(() => {
+		return userStore.userInfo?.id != article.value?.userId && userStore.userInfo?.id
+	})
 	// 时间相对化
 	const relativeTime = (time : string) => {
 		const now = Date.now()
@@ -231,33 +247,7 @@ const showFlollow = computed(()=> {
 
 	// 排序后的树状评论
 	const commentTree = computed(() => {
-		const map = new Map<number, Comment>()
-		const roots : Comment[] = []
-
-		comments.value.forEach(c => {
-			map.set(c.id, { ...c, replies: [] })
-		})
-
-		map.forEach(comment => {
-			if (comment.parentId && map.has(comment.parentId)) {
-				map.get(comment.parentId)!.replies!.push(comment)
-			} else if (comment.parentId === 0) {
-				roots.push(comment)
-			}
-		})
-
-		const sortFn = (a : Comment, b : Comment) =>
-			sortType.value === 'hot'
-				? (b.likeCount || 0) - (a.likeCount || 0)
-				: new Date(b.createTime).getTime() - new Date(a.createTime).getTime()
-
-		const sortReplies = (list : Comment[]) => {
-			list.sort(sortFn)
-			list.forEach(c => c.replies && sortReplies(c.replies))
-		}
-		sortReplies(roots)
-
-		return roots
+		return comments.value
 	})
 
 	marked.setOptions({
@@ -293,12 +283,15 @@ const showFlollow = computed(()=> {
 			uni.showToast({ title: '加载文章失败', icon: 'none' })
 		}
 	}
-
+	const selectSortType = (type : string) => {
+		sortType.value = type
+		loadComments(true)
+	}
 	const checkFollow = async () => {
 		if (!article.value?.userId) return
 		try {
 			isFollowing.value = await followApi.isFollowing(article.value.userId)
-		} catch {}
+		} catch { }
 	}
 
 	const loadRelated = async () => {
@@ -327,14 +320,14 @@ const showFlollow = computed(()=> {
 		}
 		loadingMore.value = true
 		try {
-			const res = await commentApi.list(articleId.value, { page: page.value, size: pageSize })
+			const res = await commentApi.list(articleId.value, { page: page.value, size: pageSize, sort: sortType.value })
 			const list : Comment[] = Array.isArray(res) ? res : (res.list ?? res ?? [])
 			if (isRefresh) {
 				comments.value = list
 			} else {
 				comments.value.push(...list)
 			}
-			if (list.length < pageSize) noMore.value = true
+			if (comments.value.length >= res.total) noMore.value = true
 		} catch (e) {
 			console.error('加载评论失败', e)
 		} finally {
@@ -354,7 +347,6 @@ const showFlollow = computed(()=> {
 			const res = await articleApi.like(article.value.id)
 			article.value.isLiked = res
 			article.value.likeCount += article.value.isLiked ? 1 : -1
-			uni.showToast({ title: res ? '点赞成功' : '取消点赞', icon: 'success' })
 		} catch (e) {
 			uni.showToast({ title: '操作失败', icon: 'none' })
 		}
@@ -365,7 +357,6 @@ const showFlollow = computed(()=> {
 		try {
 			const res = await collectApi.toggle(article.value.id)
 			article.value.isFavorited = res
-			uni.showToast({ title: res ? '收藏成功' : '取消收藏', icon: 'success' })
 		} catch (e) {
 			uni.showToast({ title: '操作失败', icon: 'none' })
 		}
@@ -393,11 +384,11 @@ const showFlollow = computed(()=> {
 	}
 
 	const openCommentSheet = (isFoucs = false) => {
-		if(!userStore.token)return
+		// if(!userStore.token)return
 		showCommentSheet.value = true
 		page.value = 1
-		if (userStore.token)
-			loadComments(true)
+		// if (userStore.token)
+		loadComments(true)
 		// 先重置 focus 再设置，确保每次都能触发键盘弹出
 		inputFocus.value = false
 		if (isFoucs) {
@@ -415,8 +406,22 @@ const showFlollow = computed(()=> {
 	}
 
 	const onReply = (comment : Comment) => {
+		if (!userStore.token) {
+			uni.showToast({ title: '请登录后操作', icon: 'error' })
+			setTimeout(() => {
+				uni.navigateTo({
+					url: '/pages/login/index'
+				})
+			}, 1000)
+			return
+		}
 		replyTo.value = comment
 		inputFocus.value = true
+	}
+
+	const doLike = async (comment : Comment) => {
+		const res = await commentApi.like(comment.articleId, comment.id)
+		comment.liked = res.liked
 	}
 
 	const cancelReply = () => {
@@ -448,16 +453,19 @@ const showFlollow = computed(()=> {
 		}
 	}
 
-	const goAuthor = () => {
-		if (article.value?.userId) {
-			uni.navigateTo({ url: `/pages/user/other?id=${article.value.userId}` })
-		}
+	const goAuthor = (comment : Comment) => {
+		let userId : number = article.value?.userId
+		if (comment) userId = comment.userId
+		if (userId)
+			uni.navigateTo({ url: `/pages/user/other?id=${userId}` })
 	}
 
 	const goDetail = (id : number) => {
 		uni.navigateTo({ url: `/pages/article/detail?id=${id}` })
 	}
-
+	const goPublish = (id : number) => {
+		uni.navigateTo({ url: `/pages/publish/index?id=${id}` })
+	}
 	onLoad((options) => {
 		if (options?.id) {
 			articleId.value = parseInt(options.id)
@@ -901,6 +909,7 @@ const showFlollow = computed(()=> {
 
 			.c-actions {
 				display: flex;
+				align-items: center;
 				gap: 24rpx;
 
 				.c-reply-btn {

@@ -2,7 +2,7 @@
 	<view class="other-user-page">
 		<!-- 顶部返回导航 -->
 		<view class="nav-bar">
-			<text class="back-btn" @click="goBack">‹</text>
+			<uni-icons type="left" size="20" @click="goBack"></uni-icons>
 			<text class="nav-title">{{ userInfo?.nickname || userInfo?.username || '用户主页' }}</text>
 			<view class="nav-placeholder"></view>
 		</view>
@@ -23,10 +23,15 @@
 						<text class="stat-num">{{ userInfo.followingCount || 0 }}</text>
 						<text class="stat-label">关注</text>
 					</view>
+					<view class="stat-item">
+						<text class="stat-num">{{ userInfo.likeCount || 0 }}</text>
+						<text class="stat-label">点赞</text>
+					</view>
 				</view>
 
 				<!-- 关注按钮（未登录不显示） -->
 				<view class="follow-action" v-if="userStore.isLoggedIn() && !isMySelf">
+					<view class="message-btn" @click="goMessage">私信</view>
 					<view class="followed-btn" v-if="isFollowing" @click="toggleFollow">已关注</view>
 					<view class="follow-btn" v-else @click="toggleFollow">关注</view>
 				</view>
@@ -80,7 +85,7 @@
 		try {
 			const res = await userApi.getProfile(targetUserId.value)
 			userInfo.value = res
-
+			loadNum()
 			if (userStore.isLoggedIn() && !isMySelf.value) {
 				try {
 					isFollowing.value = await followApi.isFollowing(targetUserId.value)
@@ -127,24 +132,39 @@
 
 	const toggleFollow = async () => {
 		try {
-			if (isFollowing.value) {
-				await followApi.unfollow(targetUserId.value)
-				isFollowing.value = false
-				if (userInfo.value?.followerCount !== undefined) {
-					userInfo.value.followerCount--
-				}
-			} else {
-				await followApi.follow(targetUserId.value)
-				isFollowing.value = true
-				if (userInfo.value?.followerCount !== undefined) {
-					userInfo.value.followerCount++
-				}
-			}
+			await followApi.follow(targetUserId.value)
+			isFollowing.value = !isFollowing.value
+			// if (isFollowing.value) {
+			// 	await followApi.unfollow(targetUserId.value)
+			// 	isFollowing.value = false
+			// 	if (userInfo.value?.followerCount !== undefined) {
+			// 		userInfo.value.followerCount--
+			// 	}
+			// } else {
+			// 	await followApi.follow(targetUserId.value)
+			// 	isFollowing.value = true
+			// 	if (userInfo.value?.followerCount !== undefined) {
+			// 		userInfo.value.followerCount++
+			// 	}
+			// }
 		} catch (e) {
 			uni.showToast({ title: '操作失败', icon: 'none' })
 		}
 	}
 
+	const goMessage = () => {
+		uni.navigateTo({ url: `/pages/message/chat?userId=${targetUserId.value}` })
+	}
+const loadNum = async () => {
+		if (!targetUserId.value) return
+		const res = await userApi.nums(targetUserId.value)
+		userInfo.value = {
+			...userInfo.value,
+			followerCount: res.followers,
+			followingCount: res.following,
+			likeCount: res.likes
+		};
+	}
 	const goFollowers = () => {
 		uni.navigateTo({
 			url: `/pages/user/follow-list?userId=${targetUserId.value}&type=followers`
@@ -170,7 +190,9 @@
 
 <style lang="scss" scoped>
 	.other-user-page {
-		height: 100vh;
+		height: calc(100vh - var(--window-bottom) - var(--window-top));
+		overflow-y: auto;
+		overflow-x: hidden;
 		display: flex;
 		flex-direction: column;
 		background: #f5f5f5;
@@ -260,6 +282,18 @@
 		}
 
 		.follow-action {
+			display: flex;
+			gap: 16rpx;
+
+			.message-btn {
+				padding: 14rpx 32rpx;
+				background: #fff;
+				color: #333;
+				border: 2rpx solid #ddd;
+				border-radius: 40rpx;
+				font-size: 28rpx;
+			}
+
 			.follow-btn {
 				padding: 14rpx 64rpx;
 				background: $uni-primary;
