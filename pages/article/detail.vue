@@ -4,7 +4,7 @@
 		<scroll-view class="article-scroll" scroll-y>
 			<view v-if="article" class="article-content">
 				<!-- 封面-->
-				<image v-if="article.coverImage" :src="article.coverImage" class="cover" mode="aspectFill" />
+				<image v-if="article.coverImage" :src="article.coverImage" class="cover" mode="aspectFit" />
 
 				<!-- 文章标题 -->
 				<view class="title">{{ article.title }}</view>
@@ -228,7 +228,7 @@
 		const diff = now - t
 		const minutes = Math.floor(diff / 60000)
 		const hours = Math.floor(diff / 3600000)
-		const days = Math.floor(diff / 86400000)
+		const days = Math.floor(diff / 86400000) 
 		if (minutes < 1) return '刚刚'
 		if (minutes < 60) return `${minutes}分钟前`
 		if (hours < 24) return `${hours}小时前`

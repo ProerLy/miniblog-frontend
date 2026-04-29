@@ -220,6 +220,8 @@
 		align-items: center;
 		padding: 24rpx;
 		background: #fff;
+		position: sticky;
+		top: 0;
 
 		.search-box {
 			flex: 1;

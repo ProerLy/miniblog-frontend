@@ -1,6 +1,6 @@
 <template>
   <view class="article-card" @click="goDetail">
-    <image v-if="article.coverImage" :src="article.coverImage" class="cover" mode="aspectFill" />
+    <image v-if="article.coverImage" :src="article.coverImage" class="cover" mode="aspectFit" />
     <view class="content">
       <view class="title">{{ article.title }}</view>
       <view class="summary">{{ article.summary }}</view>
